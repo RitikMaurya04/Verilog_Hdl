@@ -12,30 +12,21 @@ module spi_master
 (
     input clk,
     input start,
+    input miso,
     input [11:0] din,
 
     output reg mosi,
+    output reg sclk,
     output reg cs,
     output reg done,
-    output reg sclk
+    output reg [11:0] dout
 );
 
-//////////////////////////////////////
-// clock divider
-//////////////////////////////////////
+reg [11:0] tx_shift;
+reg [11:0] rx_shift;
+reg [3:0] bitcount;
 
-reg [3:0] clkdiv = 0;
-
-always @(posedge clk)
-begin
-    clkdiv <= clkdiv + 1;
-end
-
-wire spi_clk_en = (clkdiv == 0);
-
-//////////////////////////////////////
-// FSM
-//////////////////////////////////////
+reg sclk_prev;
 
 parameter IDLE = 0,
           LOAD = 1,
@@ -44,32 +35,16 @@ parameter IDLE = 0,
 
 reg [1:0] state = IDLE;
 
-reg [11:0] shift_reg;
-reg [3:0] bitcount;
-
-//////////////////////////////////////
-// SCLK generation
-//////////////////////////////////////
-
 always @(posedge clk)
 begin
-    if(state == IDLE)
-        sclk <= CPOL;
-    else if(spi_clk_en)
-        sclk <= ~sclk;
-end
+    sclk_prev <= sclk;
 
-//////////////////////////////////////
-// SPI FSM
-//////////////////////////////////////
-
-always @(posedge clk)
-begin
     case(state)
 
     IDLE:
     begin
         cs <= 1;
+        sclk <= CPOL;
         done <= 0;
 
         if(start)
@@ -79,32 +54,35 @@ begin
     LOAD:
     begin
         cs <= 0;
-        shift_reg <= din;
+        tx_shift <= din;
+        rx_shift <= 0;
         bitcount <= 0;
         state <= TRANSFER;
     end
 
     TRANSFER:
     begin
-        if(spi_clk_en)
+        sclk <= ~sclk;
+
+        if((CPHA==0 && sclk_prev==CPOL) ||
+           (CPHA==1 && sclk_prev!=CPOL))
         begin
+            mosi <= tx_shift[11];
+            tx_shift <= tx_shift << 1;
 
-            if((CPHA==0 && sclk==~CPOL) || (CPHA==1 && sclk==CPOL))
-            begin
-                mosi <= shift_reg[11];
-                shift_reg <= shift_reg << 1;
-                bitcount <= bitcount + 1;
-            end
+            rx_shift <= {rx_shift[10:0], miso};
 
-            if(bitcount == 12)
-                state <= DONE;
-
+            bitcount <= bitcount + 1;
         end
+
+        if(bitcount == 12)
+            state <= DONE;
     end
 
     DONE:
     begin
         cs <= 1;
+        dout <= rx_shift;
         done <= 1;
         state <= IDLE;
     end
