@@ -1,6 +1,6 @@
 # Power-Aware Immediate Generator (Custom ISA)
 
-A power-aware **Immediate Generation (IMMEXT)** unit for a custom 32-bit ISA, implemented in synthesizable Verilog and evaluated using **Yosys** and **OpenSTA** with the Nangate standard-cell library.
+A power-aware **Immediate Generation (IMMEXT)** unit for a custom 32-bit ISA, implemented in synthesizable Verilog and evaluated using **Yosys** and **OpenSTA** with the Nangate 45nm standard-cell library.
 
 The design compares two implementations:
 
