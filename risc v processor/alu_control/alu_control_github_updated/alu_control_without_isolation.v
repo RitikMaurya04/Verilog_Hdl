@@ -1,0 +1,499 @@
+// ============================================================
+// ALU CONTROL
+//
+// R4/R3/R2 FUNC : 7 bits
+// I-type FUNC    : 5 bits
+//
+// No input/control isolation is used in this version.
+// ALUOp and function inputs directly drive the decode logic.
+//
+// ALUOp:
+//   0001 -> Load/Store
+//   0010 -> R4
+//   0011 -> R4 MOV
+//   0100 -> R3I
+//   0101 -> R3
+//   0110 -> R2
+//   0111 -> R2 MOV
+//   1000 -> I-type
+// ============================================================
+
+module alu_control_noiso (
+    input  [3:0] aluop,
+
+    // R4 / R3I / R3 / R2 function field
+    input  [6:0] func_r,
+
+    // I-type function field
+    input  [4:0] func_i,
+
+    output reg [1:0] mode,
+    output reg [4:0] control,
+
+    output reg alu_enA,
+    output reg alu_enB,
+    output reg alu_enC
+);
+
+
+    // =========================================================
+    // Function encodings
+    // =========================================================
+
+    localparam [6:0] FUNC_ADD         = 7'd0;
+    localparam [6:0] FUNC_SUB         = 7'd1;
+    localparam [6:0] FUNC_OR          = 7'd2;
+    localparam [6:0] FUNC_AND         = 7'd3;
+    localparam [6:0] FUNC_NAND        = 7'd4;
+    localparam [6:0] FUNC_NOR         = 7'd5;
+    localparam [6:0] FUNC_XOR         = 7'd6;
+    localparam [6:0] FUNC_XNOR        = 7'd7;
+
+    localparam [6:0] FUNC_XOR_AND     = 7'd8;
+    localparam [6:0] FUNC_NOT_AND_XOR = 7'd9;
+    localparam [6:0] FUNC_NOT_OR_AND  = 7'd10;
+    localparam [6:0] FUNC_AND_NOT2    = 7'd11;
+
+    localparam [6:0] FUNC_INC         = 7'd12;
+    localparam [6:0] FUNC_DEC         = 7'd13;
+
+    localparam [6:0] FUNC_SLL         = 7'd14;
+    localparam [6:0] FUNC_SLT         = 7'd15;
+    localparam [6:0] FUNC_SRL         = 7'd16;
+    localparam [6:0] FUNC_SRA         = 7'd17;
+    localparam [6:0] FUNC_SGT         = 7'd18;
+
+    localparam [6:0] FUNC_MAX         = 7'd19;
+    localparam [6:0] FUNC_MIN         = 7'd20;
+
+    localparam [6:0] FUNC_MAC         = 7'd21;
+    localparam [6:0] FUNC_MSC         = 7'd22;
+    localparam [6:0] FUNC_MUL         = 7'd23;
+
+    localparam [6:0] FUNC_VADD8       = 7'd24;
+    localparam [6:0] FUNC_VMAX8       = 7'd25;
+    localparam [6:0] FUNC_SDOTP4      = 7'd26;
+
+    localparam [6:0] FUNC_NEG         = 7'd27;
+    localparam [6:0] FUNC_ABS         = 7'd28;
+    localparam [6:0] FUNC_NOT         = 7'd29;
+    localparam [6:0] FUNC_VRELU8      = 7'd30;
+
+
+    // =========================================================
+    // I-type uses only 5 bits from the common function IDs
+    // =========================================================
+
+    localparam [4:0] IFUNC_ADD = 5'd0;
+    localparam [4:0] IFUNC_SUB = 5'd1;
+    localparam [4:0] IFUNC_OR  = 5'd2;
+    localparam [4:0] IFUNC_AND = 5'd3;
+    localparam [4:0] IFUNC_XOR = 5'd6;
+    localparam [4:0] IFUNC_SLL = 5'd14;
+    localparam [4:0] IFUNC_SRL = 5'd16;
+    localparam [4:0] IFUNC_SRA = 5'd17;
+
+
+
+    // =========================================================
+    // ALU CONTROL LOGIC
+    // =========================================================
+
+    always @(*) begin
+
+        // -----------------------------------------------------
+        // Safe defaults
+        // -----------------------------------------------------
+
+        mode    = 2'b00;
+        control = 5'b11110;
+
+        alu_enA = 1'b0;
+        alu_enB = 1'b0;
+        alu_enC = 1'b0;
+
+
+        // -----------------------------------------------------
+        // Continuous decode (no global ALUEnable isolation)
+        // -----------------------------------------------------
+
+        case (aluop)
+
+                // =================================================
+                // LOAD / STORE
+                // Address = A + C
+                // =================================================
+
+                4'b0001: begin
+
+                    mode    = 2'b11;
+
+                    alu_enA = 1'b1;
+                    alu_enB = 1'b0;
+                    alu_enC = 1'b1;
+
+                    control = 5'b00000;
+
+                end
+
+
+                // =================================================
+                // R4
+                // =================================================
+
+                4'b0010: begin
+
+                    mode    = 2'b00;
+
+                    alu_enA = 1'b1;
+                    alu_enB = 1'b1;
+                    alu_enC = 1'b1;
+
+                    case (func_r)
+
+                        FUNC_ADD:
+                            control = 5'b00000;
+
+                        FUNC_SUB:
+                            control = 5'b00001;
+
+                        FUNC_OR:
+                            control = 5'b00010;
+
+                        FUNC_AND:
+                            control = 5'b00011;
+
+                        FUNC_NAND:
+                            control = 5'b00100;
+
+                        FUNC_NOR:
+                            control = 5'b00101;
+
+                        FUNC_XOR:
+                            control = 5'b00110;
+
+                        FUNC_XNOR:
+                            control = 5'b00111;
+
+                        FUNC_XOR_AND:
+                            control = 5'b10110;
+
+                        FUNC_NOT_AND_XOR:
+                            control = 5'b10101;
+
+                        FUNC_NOT_OR_AND:
+                            control = 5'b11001;
+
+                        FUNC_AND_NOT2:
+                            control = 5'b11010;
+
+                        FUNC_INC:
+                            control = 5'b01001;
+
+                        FUNC_DEC:
+                            control = 5'b01010;
+
+                        FUNC_MAX:
+                            control = 5'b01100;
+
+                        FUNC_MIN:
+                            control = 5'b01101;
+
+                        FUNC_MAC:
+                            control = 5'b01110;
+
+                        FUNC_MSC:
+                            control = 5'b01111;
+
+                        default:
+                            control = 5'b11110;
+
+                    endcase
+
+                end
+
+
+                // =================================================
+                // R4 MOV
+                // =================================================
+
+                4'b0011: begin
+
+                    mode    = 2'b11;
+                    control = 5'b11110;
+
+                    alu_enA = 1'b0;
+                    alu_enB = 1'b0;
+                    alu_enC = 1'b0;
+
+                end
+
+
+                // =================================================
+                // R3I
+                // =================================================
+
+                4'b0100: begin
+
+                    mode    = 2'b00;
+
+                    alu_enA = 1'b1;
+                    alu_enB = 1'b1;
+                    alu_enC = 1'b1;
+
+                    case (func_r)
+
+                        FUNC_ADD:
+                            control = 5'b00000;
+
+                        FUNC_SUB:
+                            control = 5'b00001;
+
+                        FUNC_OR:
+                            control = 5'b00010;
+
+                        FUNC_AND:
+                            control = 5'b00011;
+
+                        FUNC_NAND:
+                            control = 5'b00100;
+
+                        FUNC_NOR:
+                            control = 5'b00101;
+
+                        FUNC_XOR:
+                            control = 5'b00110;
+
+                        FUNC_XNOR:
+                            control = 5'b00111;
+
+                        FUNC_INC:
+                            control = 5'b01001;
+
+                        FUNC_DEC:
+                            control = 5'b01010;
+
+                        FUNC_MAX:
+                            control = 5'b01100;
+
+                        FUNC_MIN:
+                            control = 5'b01101;
+
+                        default:
+                            control = 5'b11110;
+
+                    endcase
+
+                end
+
+
+                // =================================================
+                // R3
+                // =================================================
+
+                4'b0101: begin
+
+                    mode    = 2'b01;
+
+                    alu_enA = 1'b1;
+                    alu_enB = 1'b1;
+                    alu_enC = 1'b0;
+
+                    case (func_r)
+
+                        FUNC_ADD:
+                            control = 5'b00000;
+
+                        FUNC_SUB:
+                            control = 5'b00001;
+
+                        FUNC_OR:
+                            control = 5'b00010;
+
+                        FUNC_AND:
+                            control = 5'b00011;
+
+                        FUNC_NAND:
+                            control = 5'b00100;
+
+                        FUNC_NOR:
+                            control = 5'b00101;
+
+                        FUNC_XOR:
+                            control = 5'b00110;
+
+                        FUNC_XNOR:
+                            control = 5'b00111;
+
+                        FUNC_INC:
+                            control = 5'b01001;
+
+                        FUNC_DEC:
+                            control = 5'b01010;
+
+                        FUNC_SLL:
+                            control = 5'b10000;
+
+                        FUNC_SLT:
+                            control = 5'b10001;
+
+                        FUNC_SRL:
+                            control = 5'b10010;
+
+                        FUNC_SRA:
+                            control = 5'b10011;
+
+                        FUNC_SGT:
+                            control = 5'b10100;
+
+                        FUNC_MAX:
+                            control = 5'b01100;
+
+                        FUNC_MIN:
+                            control = 5'b01101;
+
+                        FUNC_MUL:
+                            control = 5'b11111;
+
+                        FUNC_VADD8:
+                            control = 5'b10111;
+
+                        FUNC_VMAX8:
+                            control = 5'b11000;
+
+                        FUNC_SDOTP4:
+                            control = 5'b11101;
+
+                        default:
+                            control = 5'b11110;
+
+                    endcase
+
+                end
+
+
+                // =================================================
+                // R2
+                // =================================================
+
+                4'b0110: begin
+
+                    mode    = 2'b10;
+
+                    alu_enA = 1'b1;
+                    alu_enB = 1'b0;
+                    alu_enC = 1'b0;
+
+                    case (func_r)
+
+                        FUNC_NEG:
+                            control = 5'b00000;
+
+                        FUNC_ABS:
+                            control = 5'b00001;
+
+                        FUNC_NOT:
+                            control = 5'b01000;
+
+                        FUNC_INC:
+                            control = 5'b01001;
+
+                        FUNC_DEC:
+                            control = 5'b01010;
+
+                        FUNC_VRELU8:
+                            control = 5'b10110;
+
+                        default:
+                            control = 5'b11110;
+
+                    endcase
+
+                end
+
+
+                // =================================================
+                // R2 MOV
+                // =================================================
+
+                4'b0111: begin
+
+                    mode    = 2'b11;
+                    control = 5'b11110;
+
+                    alu_enA = 1'b0;
+                    alu_enB = 1'b0;
+                    alu_enC = 1'b0;
+
+                end
+
+
+                // =================================================
+                // I-TYPE
+                // FUNC = 5 bits
+                // =================================================
+
+                4'b1000: begin
+
+                    mode    = 2'b11;
+
+                    alu_enA = 1'b1;
+                    alu_enB = 1'b0;
+                    alu_enC = 1'b1;
+
+                    case (func_i)
+
+                        IFUNC_ADD:
+                            control = 5'b00000;
+
+                        IFUNC_SUB:
+                            control = 5'b00001;
+
+                        IFUNC_OR:
+                            control = 5'b00010;
+
+                        IFUNC_AND:
+                            control = 5'b00011;
+
+                        IFUNC_XOR:
+                            control = 5'b00110;
+
+                        IFUNC_SLL:
+                            control = 5'b10000;
+
+                        IFUNC_SRL:
+                            control = 5'b10010;
+
+                        IFUNC_SRA:
+                            control = 5'b10011;
+
+                        default:
+                            control = 5'b11110;
+
+                    endcase
+
+                end
+
+
+                // =================================================
+                // DEFAULT
+                // =================================================
+
+                default: begin
+
+                    mode    = 2'b00;
+                    control = 5'b11110;
+
+                    alu_enA = 1'b0;
+                    alu_enB = 1'b0;
+                    alu_enC = 1'b0;
+
+                end
+
+            endcase
+
+        end
+
+    end
+
+endmodule
