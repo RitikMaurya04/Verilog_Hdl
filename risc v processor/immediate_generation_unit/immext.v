@@ -19,6 +19,7 @@ module immext #(
     // 010 = S-Type
     // 011 = B-Type
     // 100 = J-Type
+    // 101 = R3I-Ttpe
     input  [2:0]   ImmType,
 
     // 00 = Sign extend
@@ -51,8 +52,9 @@ module immext #(
 
         // Default
         Out = {Width{1'b0}};
-
-        case (ImmType_iso)
+        if(ImmEnable)
+         begin
+           case (ImmType_iso)
 
             // =================================================
             // I-TYPE
@@ -235,6 +237,40 @@ module immext #(
                             instruction_iso[31:10]
                         };
 
+                     3'b101: begin
+
+                case (ImmMode_iso)
+
+                    // Sign extend 5-bit immediate
+                    2'b00:
+                        Out = {
+                            {(Width-5){instruction_iso[24]}},
+                            instruction_iso[24:20]
+                        };
+
+                    // Zero extend
+                    2'b01:
+                        Out = {
+                            {(Width-5){1'b0}},
+                            instruction_iso[24:20]
+                        };
+
+                    // Sign extend then shift left by 1
+                    2'b10:
+                        Out = (
+                            {
+                                {(Width-5){instruction_iso[24]}},
+                                instruction_iso[24:20]
+                            }
+                        ) << 1;
+
+                    // Custom pattern
+                    2'b11:
+                        Out = {
+                            10'h2AA,
+                            instruction_iso[24:20]
+                        };
+
                     default:
                         Out = {Width{1'b0}};
 
@@ -251,7 +287,7 @@ module immext #(
                 Out = {Width{1'b0}};
 
         endcase
-
+         end
     end
 
 endmodule
