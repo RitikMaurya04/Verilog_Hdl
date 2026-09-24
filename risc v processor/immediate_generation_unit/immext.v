@@ -91,7 +91,7 @@ module immext #(
                     // Custom pattern
                     2'b11:
                         Out = {
-                            16'hABCD,
+                            20'hABCDF,
                             instruction_iso[26:15]
                         };
 
@@ -138,7 +138,7 @@ module immext #(
                     // Custom pattern
                     2'b11:
                         Out = {
-                            16'hABCD,
+                            20'hABCDF,
                             instruction_iso[26:15]
                         };
 
@@ -185,7 +185,7 @@ module immext #(
                     // Custom pattern
                     2'b11:
                         Out = {
-                            16'hABCD,
+                            20'hABCDF,
                             instruction_iso[26:15]
                         };
 
@@ -276,7 +276,7 @@ module immext #(
                     // Custom pattern
                     2'b11:
                         Out = {
-                            10'h2AA,
+                            27'h2AAFBC1,
                             instruction_iso[24:20]
                         };
 
