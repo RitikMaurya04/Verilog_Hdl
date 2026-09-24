@@ -236,6 +236,11 @@ module immext #(
                             10'h2AA,
                             instruction_iso[31:10]
                         };
+                     default:
+                        Out = {Width{1'b0}};
+                     endcase
+
+                 end
             // =================================================
             // R3I-TYPE
                     // IMM = instruction[24:20]
