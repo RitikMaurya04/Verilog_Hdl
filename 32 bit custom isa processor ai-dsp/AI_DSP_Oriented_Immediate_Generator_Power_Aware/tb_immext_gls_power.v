@@ -1,0 +1,380 @@
+`timescale 1ns/1ps
+
+module tb_immext_gls_power;
+
+    reg [31:0] instruction;
+    reg        ImmEnable;
+    reg [2:0]  ImmType;
+    reg [1:0]  ImmMode;
+
+    wire [31:0] Out;
+
+    integer errors;
+    integer tests;
+    integer k;
+
+    immext dut (
+        .instruction(instruction),
+        .ImmEnable(ImmEnable),
+        .ImmType(ImmType),
+        .ImmMode(ImmMode),
+        .Out(Out)
+    );
+
+    task check_output;
+        input [159:0] name;
+        input [31:0] expected;
+        begin
+            #2;
+            tests = tests + 1;
+            if (Out !== expected) begin
+                $display("[FAIL] %-28s | instruction=%b ImmEnable=%b ImmType=%b ImmMode=%b | expected=%b actual=%b",
+                         name, instruction, ImmEnable, ImmType, ImmMode,
+                         expected, Out);
+                errors = errors + 1;
+            end
+            else begin
+                $display("[PASS] %-28s | Out=%b", name, Out);
+            end
+        end
+    endtask
+
+    task test_i;
+        input [159:0] name;
+        input [11:0] imm;
+        input [1:0] mode_i;
+        input [31:0] expected;
+        begin
+            instruction = 32'b0;
+            instruction[26:15] = imm;
+            ImmEnable = 1'b1;
+            ImmType   = 3'b001;
+            ImmMode   = mode_i;
+            check_output(name, expected);
+        end
+    endtask
+
+    task test_s;
+        input [159:0] name;
+        input [11:0] imm;
+        input [1:0] mode_i;
+        input [31:0] expected;
+        begin
+            instruction = 32'b0;
+            instruction[26:20] = imm[11:5];
+            instruction[9:5]   = imm[4:0];
+            ImmEnable = 1'b1;
+            ImmType   = 3'b010;
+            ImmMode   = mode_i;
+            check_output(name, expected);
+        end
+    endtask
+
+    task test_b;
+        input [159:0] name;
+        input [11:0] imm;
+        input [1:0] mode_i;
+        input [31:0] expected;
+        begin
+            instruction = 32'b0;
+            instruction[26:20] = imm[11:5];
+            instruction[9:5]   = imm[4:0];
+            ImmEnable = 1'b1;
+            ImmType   = 3'b011;
+            ImmMode   = mode_i;
+            check_output(name, expected);
+        end
+    endtask
+
+    task test_j;
+        input [159:0] name;
+        input [21:0] imm;
+        input [1:0] mode_i;
+        input [31:0] expected;
+        begin
+            instruction = 32'b0;
+            instruction[31:10] = imm;
+            ImmEnable = 1'b1;
+            ImmType   = 3'b100;
+            ImmMode   = mode_i;
+            check_output(name, expected);
+        end
+    endtask
+
+    task test_r3i;
+        input [159:0] name;
+        input [4:0] imm;
+        input [1:0] mode_i;
+        input [31:0] expected;
+        begin
+            instruction = 32'b0;
+            instruction[24:20] = imm;
+            ImmEnable = 1'b1;
+            ImmType   = 3'b101;
+            ImmMode   = mode_i;
+            check_output(name, expected);
+        end
+    endtask
+
+    task test_jalr;
+        input [159:0] name;
+        input [16:0] imm;
+        input [1:0] mode_i;
+        input [31:0] expected;
+        begin
+            instruction = 32'b0;
+            instruction[31:15] = imm;
+            ImmEnable = 1'b1;
+            ImmType   = 3'b110;
+            ImmMode   = mode_i;
+            check_output(name, expected);
+        end
+    endtask
+
+    initial begin
+        errors = 0;
+        tests  = 0;
+
+        instruction = 32'b0;
+        ImmEnable   = 1'b0;
+        ImmType     = 3'b000;
+        ImmMode     = 2'b00;
+
+        $dumpfile("immext_gls_power.vcd");
+        $dumpvars(0, tb_immext_gls_power);
+
+        // -----------------------------------------------------
+        // Exact idle workload corresponding to ImmEnable=0.
+        // These are functionally checked because the optimized
+        // block is defined to output zero when disabled.
+        // -----------------------------------------------------
+        ImmEnable   = 1'b0;
+        ImmType     = 3'b001;
+        ImmMode     = 2'b00;
+        instruction = 32'b10101010101010101010101010101010;
+        check_output("DISABLED / I-TYPE", 32'b0);
+
+        ImmEnable   = 1'b0;
+        ImmType     = 3'b010;
+        ImmMode     = 2'b11;
+        instruction = 32'b01010101010101010101010101010101;
+        check_output("DISABLED / S-TYPE", 32'b0);
+
+        ImmEnable   = 1'b0;
+        ImmType     = 3'b100;
+        ImmMode     = 2'b10;
+        instruction = 32'b11110000111100001111000011110000;
+        check_output("DISABLED / J-TYPE", 32'b0);
+
+        // I-Type
+        test_i("I SIGN EXTEND +13",
+                12'b000000001101, 2'b00,
+                32'b00000000000000000000000000001101);
+
+        test_i("I ZERO EXTEND +13",
+                12'b000000001101, 2'b01,
+                32'b00000000000000000000000000001101);
+
+        test_i("I SHIFT LEFT 2 +13",
+                12'b000000001101, 2'b10,
+                32'b00000000000000000000000000110100);
+
+        test_i("I CUSTOM +13",
+                12'b000000001101, 2'b11,
+                32'b10101011110011011111000000001101);
+
+        test_i("I SIGN EXTEND -5",
+                12'b111111111011, 2'b00,
+                32'b11111111111111111111111111111011);
+
+        test_i("I ZERO EXTEND -5",
+                12'b111111111011, 2'b01,
+                32'b00000000000000000000111111111011);
+
+        test_i("I SHIFT LEFT 2 -5",
+                12'b111111111011, 2'b10,
+                32'b11111111111111111111111111101100);
+
+        // S-Type
+        test_s("S SIGN EXTEND +11",
+                12'b000000001011, 2'b00,
+                32'b00000000000000000000000000001011);
+
+        test_s("S ZERO EXTEND +11",
+                12'b000000001011, 2'b01,
+                32'b00000000000000000000000000001011);
+
+        test_s("S SHIFT LEFT 2 +11",
+                12'b000000001011, 2'b10,
+                32'b00000000000000000000000000101100);
+
+        test_s("S CUSTOM +11",
+                12'b000000001011, 2'b11,
+                32'b10101011110011011111000000001011);
+
+        test_s("S SIGN EXTEND -5",
+                12'b111111111011, 2'b00,
+                32'b11111111111111111111111111111011);
+
+        // B-Type
+        test_b("B SIGN EXTEND +9",
+                12'b000000001001, 2'b00,
+                32'b00000000000000000000000000001001);
+
+        test_b("B ZERO EXTEND +9",
+                12'b000000001001, 2'b01,
+                32'b00000000000000000000000000001001);
+
+        test_b("B SHIFT LEFT 1 +9",
+                12'b000000001001, 2'b10,
+                32'b00000000000000000000000000010010);
+
+        test_b("B CUSTOM +9",
+                12'b000000001001, 2'b11,
+                32'b10101011110011011111000000001001);
+
+        test_b("B SIGN EXTEND -5",
+                12'b111111111011, 2'b00,
+                32'b11111111111111111111111111111011);
+
+        // J-Type
+        test_j("J SIGN EXTEND +21",
+                22'b0000000000000000010101, 2'b00,
+                32'b00000000000000000000000000010101);
+
+        test_j("J ZERO EXTEND +21",
+                22'b0000000000000000010101, 2'b01,
+                32'b00000000000000000000000000010101);
+
+        test_j("J SHIFT LEFT 1 +21",
+                22'b0000000000000000010101, 2'b10,
+                32'b00000000000000000000000000101010);
+
+        test_j("J CUSTOM +21",
+                22'b0000000000000000010101, 2'b11,
+                32'b10101010100000000000000000010101);
+
+        test_j("J SIGN EXTEND -17",
+                22'b1111111111111111101111, 2'b00,
+                32'b11111111111111111111111111101111);
+
+        // R3I
+        test_r3i("R3I SIGN EXTEND +5",
+                  5'b00101, 2'b00,
+                  32'b00000000000000000000000000000101);
+
+        test_r3i("R3I ZERO EXTEND +5",
+                  5'b00101, 2'b01,
+                  32'b00000000000000000000000000000101);
+
+        test_r3i("R3I SHIFT LEFT 1 +5",
+                  5'b00101, 2'b10,
+                  32'b00000000000000000000000000001010);
+
+        test_r3i("R3I CUSTOM +5",
+                  5'b00101, 2'b11,
+                  32'b01010101010111110111100000100101);
+
+        test_r3i("R3I SIGN EXTEND -3",
+                  5'b11101, 2'b00,
+                  32'b11111111111111111111111111111101);
+
+        test_r3i("R3I SHIFT LEFT 1 -3",
+                  5'b11101, 2'b10,
+                  32'b11111111111111111111111111111010);
+
+        // JALR
+        test_jalr("JALR SIGN EXTEND +13",
+                   17'b00000000000001101, 2'b00,
+                   32'b00000000000000000000000000001101);
+
+        test_jalr("JALR ZERO EXTEND +13",
+                   17'b00000000000001101, 2'b01,
+                   32'b00000000000000000000000000001101);
+
+        test_jalr("JALR SHIFT LEFT 1 +13",
+                   17'b00000000000001101, 2'b10,
+                   32'b00000000000000000000000000011010);
+
+        test_jalr("JALR CUSTOM +13",
+                   17'b00000000000001101, 2'b11,
+                   32'b01111001101111100000000000001101);
+
+        test_jalr("JALR SIGN EXTEND -5",
+                   17'b11111111111111011, 2'b00,
+                   32'b11111111111111111111111111111011);
+
+        // NONE / invalid
+        ImmEnable   = 1'b1;
+        ImmType     = 3'b000;
+        ImmMode     = 2'b00;
+        instruction = 32'b11111111111111111111111111111111;
+        check_output("NONE TYPE", 32'b0);
+
+        ImmEnable   = 1'b1;
+        ImmType     = 3'b111;
+        ImmMode     = 2'b11;
+        instruction = 32'b01010101010101010101010101010101;
+        check_output("INVALID TYPE", 32'b0);
+
+        // Same activity workload used for power analysis.
+        ImmEnable = 1'b0;
+        for (k = 0; k < 40; k = k + 1) begin
+            instruction = 32'b00010011010101100111100010010101
+                        ^ (k * 32'b00000000000000010001000100010001);
+            ImmType = k[2:0];
+            ImmMode = k[1:0];
+            #1;
+        end
+
+        ImmEnable = 1'b1;
+
+        instruction = 32'b0; instruction[26:15] = 12'b000000001101;
+        ImmType = 3'b001; ImmMode = 2'b00; #1;
+
+        instruction = 32'b0; instruction[26:20] = 7'b0000000; instruction[9:5] = 5'b01011;
+        ImmType = 3'b010; ImmMode = 2'b10; #1;
+
+        instruction = 32'b0; instruction[26:20] = 7'b0000000; instruction[9:5] = 5'b01001;
+        ImmType = 3'b011; ImmMode = 2'b11; #1;
+
+        instruction = 32'b0; instruction[31:10] = 22'b0000000000000000010101;
+        ImmType = 3'b100; ImmMode = 2'b10; #1;
+
+        instruction = 32'b0; instruction[24:20] = 5'b00101;
+        ImmType = 3'b101; ImmMode = 2'b11; #1;
+
+        instruction = 32'b0; instruction[31:15] = 17'b00000000000001101;
+        ImmType = 3'b110; ImmMode = 2'b00; #1;
+
+        // Final inactive workload
+        ImmEnable   = 1'b0;
+        ImmType     = 3'b110;
+        ImmMode     = 2'b11;
+        instruction = 32'b10110101101011010011101001100110;
+        #1;
+
+        ImmType     = 3'b001;
+        ImmMode     = 2'b01;
+        instruction = 32'b01001001111100011101010110101100;
+        #1;
+
+        ImmType     = 3'b100;
+        ImmMode     = 2'b10;
+        instruction = 32'b11110000111100001111000011110000;
+        #5;
+
+        $display("==============================================");
+        $display("IMMEXT GATE-LEVEL TEST SUMMARY");
+        $display("TOTAL TESTS  = %0d", tests);
+        $display("TOTAL ERRORS = %0d", errors);
+        if (errors == 0)
+            $display("GATE-LEVEL IMMEXT SELF-TEST PASSED");
+        else
+            $display("GATE-LEVEL IMMEXT SELF-TEST FAILED");
+        $display("==============================================");
+
+        $finish;
+    end
+
+endmodule
