@@ -1,0 +1,27 @@
+Processor PPA Summary
+Baseline area: 31692.038 um^2
+Enable area: 33253.458 um^2
+Area overhead: +4.93%
+
+Baseline critical data-path delay: 8.260 ns
+Enable critical data-path delay: 8.416 ns
+Baseline critical-path-only Fmax estimate: 121.1 MHz
+Enable timing-derived minimum period:
+  8.416 + 0.100 clock uncertainty + 0.044 setup = 8.560 ns
+Enable timing-derived Fmax: approximately 116.8 MHz
+
+Baseline setup slack @10 ns: 1.596 ns
+Enable setup slack @10 ns: 1.441 ns
+
+Baseline total power: 2.37 mW
+Enable total power: 2.00 mW
+Total power reduction: 15.61%
+
+Baseline switching power: 0.678 mW
+Enable switching power: 0.496 mW
+Switching power reduction: 26.84%
+
+Baseline internal power: 1.05 mW
+Enable internal power: 0.844 mW
+Baseline leakage: 0.637 mW
+Enable leakage: 0.661 mW
