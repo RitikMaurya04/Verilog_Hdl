@@ -1,0 +1,16 @@
+Main Decoder PPA Results
+Technology/Library: NangateOpenCellLibrary 45 nm
+Reference clock: 10 ns (100 MHz)
+
+Metric,Baseline,Main Decoder,Change
+Cell count,47,60,+27.66%
+Area (um^2),46.018,60.382,+31.21%
+Worst delay (ns),1.21,1.26,+4.13%
+Setup slack (ns),7.79,7.74,-0.05 ns
+Min delay slack (ns),2.00,2.00,0.00 ns
+Internal power (uW),1.33,1.92,+44.36%
+Switching power (uW),1.03,1.48,+43.69%
+Leakage power (uW),1.13,1.54,+36.28%
+Total power (uW),3.49,4.93,+41.26%
+VCD annotated pins,199,258,N/A
+VCD unannotated pins,0,0,N/A
