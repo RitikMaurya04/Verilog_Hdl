@@ -1,0 +1,40 @@
+ResultMUX PPA Results
+====================
+
+Baseline
+--------
+Cells: 147
+Area: 149.226 um^2
+Internal power: 1.92 uW
+Switching power: 3.39 uW
+Leakage power: 3.27 uW
+Total power: 8.57 uW
+Worst delay: 1.35 ns
+Setup slack: 7.65 ns
+Minimum slack: 2.02 ns
+Annotated pins: 722
+Unannotated pins: 0
+
+Enable
+------
+Cells: 102
+Area: 123.956 um^2
+Internal power: 1.55 uW
+Switching power: 3.12 uW
+Leakage power: 2.48 uW
+Total power: 7.15 uW
+Worst delay: 1.34 ns
+Setup slack: 7.66 ns
+Minimum slack: 2.03 ns
+Annotated pins: 627
+Unannotated pins: 0
+
+Change
+------
+Cell count: -30.61%
+Area: -16.93%
+Internal power: -19.27%
+Switching power: -7.96%
+Leakage power: -24.16%
+Total power: -16.57%
+Worst delay: -0.74%
